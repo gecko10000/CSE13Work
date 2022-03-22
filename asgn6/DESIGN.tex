@@ -1,0 +1,119 @@
+\documentclass[12pt]{article}
+\usepackage{fullpage}
+\usepackage{hyperref}
+\usepackage{mathtools}
+
+\title{Design Document - Huffman Coding}
+\author{Lev Teytelman}
+\date{\today}
+
+\begin{document}\maketitle
+\section{Program Description}
+
+This assignment will use the Huffman encoding algorithm in order to compress files and reduce their sizes. It consists of two main programs: \begin{itemize}
+    \item \verb|encode| - Encodes a file using Huffman encoding
+    \item \verb|decode| - Decodes a file that has been encoded
+\end{itemize}
+\section{Included Files}
+
+\begin{itemize}
+    \item encode.c - The implementation of the \verb|encode| program with a \verb|main| function, flag processing, and Huffman tree construction/encoding.
+    \item decode.c - The implementation of the \verb|decode| program with a \verb|main| function, flag processing, Huffman tree construction, and file decoding.
+    \item test.c - The implementation of the \verb|test| program, created to test functionality of specific parts of the program and ensure everything is working as intended.
+    \item defines.h - Macros for constants and magic numbers for clarity.
+    \item header.h - The definition for the \verb|Header| struct, for use in the encoded file.
+    \item node.h - The function and struct declarations of the \verb|Node| abstract data type.
+    \item node.c - The implementation of the \verb|Node| functions and struct.
+    \item pq.h - The function and struct declarations for the \verb|PriorityQueue| abstract data type.
+    \item pq.c - The implementation of the \verb|PriorityQueue| struct and related functions.
+    \item code.h - The function and struct declarations for the \verb|Code| abstract data type.
+    \item code.c - The implementation of the \verb|Code| struct and related functions.
+    \item io.h - The declaration for functions related to file input and output, mostly used to ensure bulk reads and writes.
+    \item io.c - The implementations of the aforementioned I/O functions.
+    \item stack.h - The function and struct declarations for the \verb|Stack| abstract data type.
+    \item stack.c - The implementation of the \verb|Stack| and related functions.
+    \item huffman.h - The function declarations for creating and modifying Huffman trees.
+    \item huffman.c - The implementations of the Huffman-tree-related functions.
+    \item Makefile - The file used to easily compile and link files into executable binaries.
+    \item README.md - An explanation of how to build and run the \verb|encode| and \verb|decode| programs.
+    \item DESIGN.pdf - This document, explaining how the program will work.
+\end{itemize}
+\section{Structure}
+
+The \verb|encode| program will, in the simplest form, perform the following steps: \begin{enumerate}
+    \item Read the input into a histogram of characters.
+    \item Build a Huffman tree based on the values in the histogram.
+    \item Create and write a header to the output file.
+    \item Write the tree to the output file.
+    \item For each character in the input, find the corresponding path down the tree and write it to file.
+\end{enumerate}
+
+Our \verb|decode| program will do the following: \begin{enumerate}
+    \item Read and verify the header.
+    \item Read and reconstruct the Huffman tree that was written to file.
+    \item Read the encoded characters one bit at a time and find the matching characters on the tree, writing them to the output file.
+\end{enumerate}
+\section{Error Handling}
+
+Environments can and will have errors, especially with memory management and files! We will need to handle these appropriately to ensure our program runs smoothly. Firstly, we need to ensure that \verb|malloc| and \verb|calloc| do not have issues. We do this by checking the return value: if \verb|NULL| is returned, the program was unable to allocate enough memory and we should exit.
+
+A second important check we need to make is that the program is able to open files; if a file can't be opened, we may have many issues further on in our program. The way we open files with syscalls, as required for this assignment, is \verb|open| and \verb|creat| (to create files). These functions will return $-1$ if they fail, so we can easily compare whether or not their return values are $== -1$ and exit with an error message if so. Similarly, we will need to check if the input is seekable or not for our \verb|encode| program, as we need to iterate the file twice and therefore go back to the start. If it is not seekable, we copy it into a temporary file and use that instead, ensuring we \verb|unlink| it afterwards.
+\section{Pseudocode}
+
+In order to not read our file into memory all at once (as with large files this would not work or be extremely inefficient), we will read 4096 bytes at a time until we hit the end of the file. This way, the number of bytes being used is never more than the size of the array (4096) and our memory usage stays comparatively low: \begin{verbatim}
+    num_of_read_bytes = None
+    while ((num_of_read_bytes = read(input, array, 4096)) > 0):
+        for i in range(num_of_read_bytes):
+            // do something with said bytes
+\end{verbatim}
+
+Since our encoding program needs to read our input file to create a histogram and to encode the bytes, we will need to read through it twice; this requires it to be seekable. In order to check whether the file is seekable, we will use the syscall \verb|lseek| without actually changing our position in the file (by passing $0$ for the offset and the \verb|SEEK_CUR| macro to specify the action). We will then check whether that fails (returns $-1$, and if so, we will copy the data 4096 bytes at a time into a temporary file that we can seek from, in a similar manner to the above pseudocode:
+\begin{verbatim}
+    temp_created = false
+    if (lseek(input, 0, SEEK_CUR) == -1):
+        temp_file = create_file("tmp")
+        temp_created = true
+        // read bytes similarly to the code above
+        num_of_read_bytes = None
+        while ((num_of_read_bytes = read(input, array, 4096)) > 0):
+            write(temp_file, array, 4096)
+        close(input) // close non-seekable input
+        close(temp_file) // reopen temp file for reading
+        input = open("tmp", READ)
+\end{verbatim}
+After using the temp file, we will need to delete it from the filesystem. We will do this by checking for \verb|temp_created| and using the syscall \verb|unlink|:
+\begin{verbatim}
+    if (temp_created):
+        unlink("tmp")
+\end{verbatim}
+When reading and writing our header in the context of the encoded file, we will need to convert it into bytes when writing, and back into a header when reading. We will do this by passing a pointer to the header, which will point to the start of the sequence of bytes in memory representing the header. Then we will simply write that amount of bytes to the file:
+\begin{verbatim}
+    Header h = None
+    write(output, &h, sizeof(Header))
+\end{verbatim}
+We reference the header as the function requires a byte array, and passing the header directly would not work. We then tell it how much of the memory to read, to ensure we don't go outside of the boundaries and write random garbage to file.
+
+Reading the header will work similarly to writing, but this time we will read the header size in bytes from file:
+\begin{verbatim}
+    Header h = None
+    read(input, &h, sizeof(Header))
+\end{verbatim}
+The header will also require the input file's permissions, the tree size, and the file size. Obtaining the file permissions and size will require a call to \verb|fstat|:
+\begin{verbatim}
+def get_permissions(int file):
+    stat stats = None
+    fstat(file, &stats)
+    return stats.st_mode
+
+def get_size(int file):
+    stat stats = None
+    fstat(file, &stats)
+    return stats.st_size
+\end{verbatim}
+When reading in the input, we will use \verb|fchmod| to set the output file's permissions:
+\begin{verbatim}
+    Header h = None
+    read(input, &h, sizeof(Header))
+    fchmod(output, h.permissions)
+\end{verbatim}
+\end{document}

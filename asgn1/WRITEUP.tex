@@ -1,0 +1,41 @@
+\documentclass[12pt]{article}
+\usepackage{graphicx}
+\usepackage{fullpage}
+
+\title{Write-up Document - Getting Acquainted with Unix and C}
+\author{Lev Teytelman}
+\date{\today}
+
+\begin{document}\maketitle
+\section*{Plot 1 - Collatz Sequence Lengths}
+
+For this first plot, I needed to get the length of the sequence, which in the script was an array. Therefore, I printed out the array and piped it to the \verb|wc| (word count) command. This counted the number of steps taken to get to 1 and added it to the \verb|lengths| array.
+
+After adding all 9,999 lengths to the array, I printed each value, new-line-separated, and put it into a \verb|.dat| file. This file was later used by gnuplot to plot the points on the graph.
+\section*{Plot 2 - Maximum Collatz Sequence Value}
+
+For the second plot, I needed to get the highest value out of the sequence. For this, I first printed and piped the array \verb|printf '%s\n' "${nums[@]}"|, then sorted it numerically and in reverse using \verb|sort -rn|, and finally selected the first one via \verb|head -n 1|. I did the same as the first graph with the resulting array, piping it into a file and later using it to create the plot on the PDF.
+\section*{Plot 3 - Collatz Sequence Length Histogram}
+
+The third plot used the data from the first plot, but interpreted it differently. After piping the array into an inverse sort (\verb|sort -rn|), I was able to count the number of unique occurrences of each length using \verb|uniq -c|. Unfortunately, the data was in the wrong order for the histogram, so I used \verb|awk| to invert it with \verb|awk '{print $2 " " $1}'|. I pointed this into a file and continued on my way. After setting the boxwidth to 0, I was able to use \verb|with boxes| to draw my histogram.
+\section*{Takeaways}
+
+When starting this assignment, I had already had quite a bit experience with scripting - I use Linux on a daily basis, after all. However, I had never used \verb|gnuplot| - this was new to me. Using what I knew, I was luckily able to figure out the script structure relatively quickly. Specific concepts I learned while doing this assignment include:
+\begin{itemize}
+    \item Using \verb|printf| to split an array (or anything space-separated, for that matter) back onto separate lines
+    \item Redirecting standard output to a file
+    \item Using \verb|gnuplot| to visualize and plot data
+    \item Using \verb|awk| to manipulate an incorrectly ordered line of input
+    \item Counting unique occurrences of a value with \verb|uniq|
+    \item Effectively using LaTeX to create PDFs neatly
+\end{itemize}
+
+\begin{figure}\begin{centering}
+\includegraphics{collatz1}\caption{The pattern of growing sequence lengths}
+\includegraphics{collatz2}\caption{The maximum values of each sequence}
+\end{centering}\end{figure}
+\begin{figure}\begin{centering}
+\includegraphics{collatz3}\caption{The frequency of each sequence length}
+\end{centering}\end{figure}
+
+\end{document}

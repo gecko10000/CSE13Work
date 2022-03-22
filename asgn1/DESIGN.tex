@@ -1,0 +1,31 @@
+\documentclass[12pt]{article}
+\usepackage{fullpage}
+
+\title{Design Document - Getting Acquainted with Unix and C}
+\author{Lev Teytelman}
+\date{\today}
+
+\begin{document}\maketitle
+\section{Program Description}
+
+This script compiles, runs, and uses the results of collatz.c to create graphs displaying various stats about the Collatz sequence. It runs the program about 10000 times with inputs from 2 to 10000, inclusive, and stores the results in an array. It then uses the results to graph the sequence lengths, max values, and a histogram of the values using gnuplot.
+\section{Included Files}
+
+\begin{itemize}
+    \item plot.sh - The bash script used to compile and run collatz.c and plot the results.
+    \item collatz.c - The provided C file containing the code to print the Collatz sequence.
+    \item Makefile - The file used to create more readable aliases for removing old binaries and compiling new ones.
+    \item README.md - Contains instructions for running the program.
+    \item DESIGN.pdf - This document, describes the project, its files, and objectives.
+    \item WRITEUP.pdf - Contains a summary of the results, including the plots and an analysis of the script.
+\end{itemize}
+\section{Structure}
+
+The script starts by creating the \verb|/tmp/| directory, followed by removing old files and building the \verb|collatz.c| file. After this, two arrays are created named \verb|lengths| and \verb|maximums|. The script loops through all numbers from 2 to 10,000 (inclusive) and runs the newly-compiled C file with the incrementing number as the input.
+
+The output is then put into an array called \verb|nums|, which is then used to populate the other two by taking the length of the array and appending it to \verb|lengths| and sorting the array and appending the largest value to \verb|maximums|.
+
+After the for loop completes, the arrays are saved to temporary files \verb|/tmp/lengths.dat|, \verb|/tmp/maximums.dat|, and \verb|/tmp/length_hist.dat|.
+
+After creating the files, the script feeds \verb|gnuplot| a series of inputs, first setting various properties about the environment and eventually plotting the \verb|.dat| files onto three different PDFs.
+\end{document}

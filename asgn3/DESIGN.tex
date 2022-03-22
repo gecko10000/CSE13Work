@@ -1,0 +1,81 @@
+\documentclass[12pt]{article}
+\usepackage{fullpage}
+
+\title{Design Document - Sorting: Putting Your Affairs in Order}
+\author{Lev Teytelman}
+\date{\today}
+
+\begin{document}\maketitle
+\section{Program Description}
+
+This program generates pseudorandom numbers via a seed, sorts them using various sorting algorithm, and prints them.
+\section{Included Files}
+
+\begin{itemize}
+    \item batcher.c - The source file with the implementation of batcher sort and helper functions.
+    \item batcher.h - The header file with the function declaration of \verb|batcher_sort| for use in other files.
+    \item insert.c - The source file with the implementation of the insertion sort function.
+    \item insert.h - The header file with the declaration of the \verb|insertion_sort| function for use in other files.
+    \item heap.c - The source file with the implementation of heap sort and helper functions.
+    \item heap.h - The header file with the declaration of the \verb|heap_sort| function for use in other files.
+    \item quick.c - The source file with the implementation of quick sort and helper functions.
+    \item quick.h - The header file with the declaration of the \verb|quick_sort| function for use in other files.
+    \item set.h - Provides the set ADT and implements the appropriate functions for it.
+    \item stats.c - The source file with the implementation for the Stats struct functions.
+    \item stats.h - The header file with the function declaration and the Stats struct.
+    \item sorting.c - The file containing the \verb|main| function and logic for calling the appropriate sorts.
+    \item Makefile - The logic to preprocess, compile, and link the program files with a single command.
+    \item README.md - A short rundown of the program's functionality and usage.
+    \item DESIGN.pdf - This file, describing preliminary ideas and pseudocode for the assignment.
+    \item WRITEUP.pdf - The document analyzing findings and the code used to make the program work.
+\end{itemize}
+\section{Structure}
+
+This program will take flags to specify which sorts to run, the size of the array, the amount of sorted numbers to print, and the seed for the pseudorandom number generator. It will then check which sorts are enabled, and call them accordingly. The sorts have varying efficiencies, as will be shown with the differing compare and move amounts for each sort. The more sorts/compares it does, the worse its performance is.
+
+This assignment uses a set data structure to store information about which sorts are toggled. During argument processing, bits will be set to 1 using the \verb|insert_set| function for the corresponding sort index. Afterwards, the saved options are processed in a \verb|for| loop and the corresponding function is called if the bit is set (checked using \verb|member_set|).
+
+An important but easily overlooked aspect of the program is that the array's size should be able to go up to the memory limit of the computer. This aspect of scaling can be covered using C's \verb|malloc| function when creating the array along with \verb|free| after using it to ensure no memory leaks. The array will also be reused by each sort, as there's no reason to use separate arrays for each one as long as the values are set back in the same configuration each time.
+\section{Pseudocode}
+
+A big part of this assignment is understanding and effectively utilizing the set data structure, as well as pseudorandom number generation. To generate pseudorandom numbers for the array, I will create a function which will operate similarly to this:
+\begin{verbatim}
+    def generate_random(array, seed):
+        set_seed(seed)
+        for i in range(len(array)):
+            array[i] = random() & ~(3 << 30)
+\end{verbatim}
+This will populate the array with pseudorandom numbers generated from the given seed. The \verb|& ~(3 << 30)| is a trick in which I take only the 30 least significant bits from the generated number (by inverting 11000... and then bitwise ANDing the result).
+
+The set is used for storing which sorts to do depending on the options, and the usage in the \verb|main| will look similar to the following:
+\begin{verbatim}
+    set = empty_set()
+    while(get_opt() != -1):
+        if (option == 'a'):
+            add(quick, set)
+            add(heap, set)
+            add(insertion, set)
+            add(batcher, set)
+        else if (option == 'q'):
+            add(quick, set)
+        else if (option == 'h'):
+            add(heap, set)
+        else if (option == 'i'):
+            add(insertion, set)
+        else if (option == 'b'):
+            add(batcher, set)
+\end{verbatim}
+This will ensure that all specified sorts are added to the set, which can later be checked for the appropriate sorts:
+\begin{verbatim}
+    if (has(quick, set)):
+        quick_sort()
+    if (has(heap, set)):
+        heap_sort()
+    if (has(insertion, set)):
+        insertion_sort()
+    if (has(batcher, set)):
+        batcher_sort()
+\end{verbatim}
+We can use the set we populated with our option processing to call the proper functions and do the right sorts.
+
+\end{document}
